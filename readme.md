@@ -22,7 +22,7 @@ This project provides an implementation of APScheduler, offering a robust and fl
 1. Clone this repository:
    ```
    git clone https://github.com/jimmc414/enhanced-apscheduler.git
-   cd enhanced-apscheduler
+   cd apscheduler
    ```
 
 2. Create a virtual environment (optional but recommended):
