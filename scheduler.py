@@ -8,13 +8,13 @@ from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 import subprocess
-import time
 import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
 from rich import box
+from utils import check_file_exists, check_file_locked, check_file_timestamp, check_file_absent, check_current_date
 
 # Load environment variables
 load_dotenv()
@@ -35,7 +35,6 @@ class EnhancedAPScheduler:
         self.scheduler = self._create_scheduler()
         self.is_running = False
         self.jobs = []  # Store jobs here when scheduler is stopped
-        self.job_status = {}  # Store job status (pass/fail) and last run time
 
     def _create_scheduler(self) -> BackgroundScheduler:
         jobstores = {
@@ -104,14 +103,10 @@ class EnhancedAPScheduler:
             else:
                 raise ValueError(f"Unknown trigger type: {trigger_type}")
         
-        job = self.scheduler.add_job(func, trigger, **kwargs)
-        self.job_status[job.id] = {'status': 'Not run yet', 'last_run': None}
-        return job
+        return self.scheduler.add_job(func, trigger, **kwargs)
 
     def remove_job(self, job_id: str):
         self.scheduler.remove_job(job_id)
-        if job_id in self.job_status:
-            del self.job_status[job_id]
 
     def get_jobs(self) -> List[Dict[str, Any]]:
         if self.is_running:
@@ -120,8 +115,7 @@ class EnhancedAPScheduler:
                     'id': job.id,
                     'name': job.name,
                     'trigger': str(job.trigger),
-                    'next_run_time': job.next_run_time,
-                    'status': self.job_status.get(job.id, {'status': 'Not run yet', 'last_run': None})
+                    'next_run_time': job.next_run_time
                 }
                 for job in self.scheduler.get_jobs()
             ]
@@ -131,9 +125,7 @@ class EnhancedAPScheduler:
                     'id': job['id'],
                     'name': job['name'],
                     'trigger': str(job['trigger']),
-                    'next_run_time': None,
-                    'status': self.job_status.get(job['id'], {'status': 'Not run yet', 'last_run': None}),
-                    'scheduler_status': 'Inactive (Scheduler Stopped)'
+                    'next_run_time': job['next_run_time'] if job['next_run_time'] else "N/A"
                 }
                 for job in self.jobs
             ]
@@ -147,7 +139,8 @@ class EnhancedAPScheduler:
     @staticmethod
     def python_task_example(arg1: str, arg2: str):
         logger.info(f"Running Python task with arguments: {arg1}, {arg2}")
-        time.sleep(5)  # Simulate a time-consuming task
+        # Simulate a time-consuming task
+        time.sleep(5)
         logger.info("Python task completed.")
 
     @staticmethod
@@ -159,16 +152,37 @@ class EnhancedAPScheduler:
         except subprocess.CalledProcessError as e:
             logger.error(f"Command failed with error: {e.stderr}")
 
-    def update_job_status(self, job_id: str, status: str):
-        self.job_status[job_id] = {'status': status, 'last_run': datetime.now()}
+    @staticmethod
+    def file_check_task(file_path: str, expected_modification_time: datetime):
+        logger.info(f"Checking file: {file_path}")
+        
+        if not check_file_exists(file_path):
+            logger.error(f"File does not exist: {file_path}")
+            return
+
+        if check_file_locked(file_path):
+            logger.warning(f"File is locked: {file_path}")
+            return
+
+        if check_file_timestamp(file_path, expected_modification_time, '>='):
+            logger.info(f"File {file_path} has been modified since {expected_modification_time}")
+        else:
+            logger.warning(f"File {file_path} has not been modified since {expected_modification_time}")
+
+    @staticmethod
+    def date_check_task(expected_date: datetime):
+        logger.info(f"Checking if current date matches expected date: {expected_date.date()}")
+        
+        if check_current_date(expected_date):
+            logger.info("Current date matches the expected date.")
+        else:
+            logger.warning("Current date does not match the expected date.")
 
 def job_listener(event):
     if event.exception:
         logger.error(f"Job {event.job_id} raised an exception: {event.exception}")
-        scheduler.update_job_status(event.job_id, 'Failed')
     else:
         logger.info(f"Job {event.job_id} executed successfully")
-        scheduler.update_job_status(event.job_id, 'Passed')
 
 def print_jobs(scheduler: EnhancedAPScheduler):
     jobs = scheduler.get_jobs()
@@ -179,38 +193,24 @@ def print_jobs(scheduler: EnhancedAPScheduler):
         table.add_column("ID", style="cyan")
         table.add_column("Name", style="magenta")
         table.add_column("Trigger", style="blue")
-        table.add_column("Next Run", style="yellow")
-        table.add_column("Countdown", style="green")
-        table.add_column("Last Run Status", style="bold")
-        table.add_column("Scheduler Status", style="bold")
+        table.add_column("Next Run Time", style="yellow")
+        table.add_column("Status", style="bold")
 
-        now = datetime.now(scheduler.scheduler.timezone)
         for job in jobs:
-            next_run = job['next_run_time']
-            countdown = "N/A"
-            if next_run:
-                time_diff = next_run - now
-                countdown = str(timedelta(seconds=int(time_diff.total_seconds())))
-
-            status = job['status']['status']
-            status_style = "green" if status == 'Passed' else "red" if status == 'Failed' else "yellow"
-
             if scheduler.is_running:
-                scheduler_status = "Active" if next_run is not None else "Inactive"
-                scheduler_status_style = "green" if next_run is not None else "grey70"
+                status_style = "green" if job['next_run_time'] is not None else "grey70"
+                status = "Active" if job['next_run_time'] is not None else "Inactive"
             else:
-                scheduler_status = job.get('scheduler_status', 'Scheduler Stopped')
-                scheduler_status_style = "red"
+                status_style = "red"
+                status = "Scheduler Stopped"
             
             table.add_row(
                 job['id'],
                 job['name'] or "N/A",
                 str(job['trigger']),
-                str(next_run) if next_run else "N/A",
-                countdown,
+                str(job['next_run_time']) if job['next_run_time'] else "N/A",
                 status,
-                scheduler_status,
-                style=scheduler_status_style
+                style=status_style
             )
         
         console.print(table)
@@ -218,7 +218,7 @@ def print_jobs(scheduler: EnhancedAPScheduler):
 def add_task(scheduler: EnhancedAPScheduler):
     console.print("\nAdding a new task to the scheduler", style="bold green")
     
-    task_type = console.input("[bold cyan]Enter task type (python_task or cli_command): [/bold cyan]").strip()
+    task_type = console.input("[bold cyan]Enter task type (python_task, cli_command, file_check, or date_check): [/bold cyan]").strip()
     task_id = console.input("[bold cyan]Enter a unique task ID: [/bold cyan]").strip()
     
     if task_type == "python_task":
@@ -230,8 +230,17 @@ def add_task(scheduler: EnhancedAPScheduler):
         command = console.input("[bold cyan]Enter the CLI command to execute: [/bold cyan]").strip()
         task_func = EnhancedAPScheduler.cli_command_task
         task_args = [command]
+    elif task_type == "file_check":
+        file_path = console.input("[bold cyan]Enter the file path to check: [/bold cyan]").strip()
+        expected_mod_time = console.input("[bold cyan]Enter expected modification time (YYYY-MM-DD HH:MM:SS): [/bold cyan]").strip()
+        task_func = EnhancedAPScheduler.file_check_task
+        task_args = [file_path, datetime.strptime(expected_mod_time, "%Y-%m-%d %H:%M:%S")]
+    elif task_type == "date_check":
+        expected_date = console.input("[bold cyan]Enter expected date (YYYY-MM-DD): [/bold cyan]").strip()
+        task_func = EnhancedAPScheduler.date_check_task
+        task_args = [datetime.strptime(expected_date, "%Y-%m-%d")]
     else:
-        console.print("Invalid task type. Please choose 'python_task' or 'cli_command'.", style="bold red")
+        console.print("Invalid task type. Please choose 'python_task', 'cli_command', 'file_check', or 'date_check'.", style="bold red")
         return
 
     trigger_type = console.input("[bold cyan]Enter trigger type (interval, cron, or date): [/bold cyan]").strip()
@@ -289,7 +298,6 @@ def main():
         'timezone': os.getenv('TIMEZONE', 'UTC')
     }
 
-    global scheduler
     scheduler = EnhancedAPScheduler(config)
     scheduler.scheduler.add_listener(job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
 
@@ -327,9 +335,11 @@ def main():
                 scheduler.stop()
             break
         else:
+            else:
             console.print("Invalid choice. Please enter a number between 1 and 8.", style="bold red")
 
     console.print("Thank you for using the Enhanced APScheduler CLI. Goodbye!", style="bold magenta")
 
 if __name__ == '__main__':
     main()
+            

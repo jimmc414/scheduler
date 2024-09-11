@@ -1,0 +1,45 @@
+"FRNO"
+"DSSN"
+"CASE"
+"HDATEL:DMO" - Demand
+"HDATEL:DOI" - Demand
+"HDATEL:PFD" - PETITION FILED ON:
+"HDATEL:PS" - Personal Service
+"HDATEL:RS" - Residential Service
+"HDATEL:JTG" - default judgment
+"HDATEL:CJE" - judgment
+"HDATEL:GTJ" - Bank Garn Out
+"HDATEL:GRN" - Wage Garn Out
+"HDATEL:FSL" - Closed Statute of Limitations
+"HDATEL:FCC" - Closed Client Request
+"HDATEL:FCB" - Closed Banruptcy
+"HDATEL:FC3" - Closed - BKY Ch 13
+"HDATEL:FCP" - Closed - Paid
+"HDATEL:FCT" - Closed - Settled
+"HDATEL:FC1" - Closed - Deceased
+"HDATEL:FCG" - Closed - Out of State
+"HDATEL:FCN" - Closed - No Documents
+"HDATEL:FCX" - Closed - Duplicate File
+"HDATEL:FCH" - Closed - Hardship
+"HDATEL:FCE" - Closed - Judgment Expired
+"HDATEL:ASO" - PRE-SUIT SIF 
+"HDATEL:ASP" - POST-SUIT SIF
+"HDATEL:AJS" - POST JE SIF
+"HDATEL:APP" - PRE-SUIT PIF
+"HDATEL:APT" - POST-SUIT PIF
+"HDATEL:APJ" - POST JUDGMENT PIF
+"DDATE:TP6" - Multiple Payments
+"DCOMMENT:TP6"
+"DDATE:TP7" - pending final payment
+"DCOMMENT:TP7"
+"HDATEGL:C0" - Call From Debtor
+"HDATEGL:C2" - Called Debtor-Talked
+"LPAY" - Last Pay Amount
+"ENAML" - Employer Name
+"EVRDAT" - Employment Verification Date
+"CLOSEDAT" - File Closed Date
+
+
+
+
+"HDATEL:DOI","HDATEL:PFD","HDATEL:PS","HDATEL:RS","HDATEL:JTG","HDATEL:CJE","JDATE","JAMT","UDD_H_JDG_PRINCIPAL","UDD_H_JDG_INTEREST","UDD_H_JDG_ATTORNEY","HDATEL:GRN","HDATEL:GTJ","SPACER1","HDATEL:FSL","HDATEL:FCC","HDATEL:FCB","HDATEL:FC3","HDATEL:FCP","HDATEL:FCT","HDATEL:FC1","HDATEL:FCG","HDATEL:FCN","HDATEL:FCX","HDATEL:FCH","HDATEL:FCE","HDATEL:ASO","HDATEL:ASP","HDATEL:AJS","HDATEL:APP","HDATEL:APT","HDATEL:APJ","DDATE:TP6","DCOMMENT:TP6","DDATE:TP7","DCOMMENT:TP7","HDATEGL:C0","HDATEGL:C2","LPAY","ENAML","EVRDAT","CLOSEDAT"
