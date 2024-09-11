@@ -108,27 +108,27 @@ class EnhancedAPScheduler:
     def remove_job(self, job_id: str):
         self.scheduler.remove_job(job_id)
 
-def get_jobs(self) -> List[Dict[str, Any]]:
-    if self.is_running:
-        return [
-            {
-                'id': job.id,
-                'name': job.name,
-                'trigger': str(job.trigger),
-                'next_run_time': job.next_run_time
-            }
-            for job in self.scheduler.get_jobs()
-        ]
-    else:
-        return [
-            {
-                'id': job.get('id', 'N/A'),
-                'name': job.get('name', 'N/A'),
-                'trigger': str(job.get('trigger', 'N/A')),
-                'next_run_time': job.get('next_run_time', 'N/A')
-            }
-            for job in self.jobs
-        ]
+    def get_jobs(self) -> List[Dict[str, Any]]:
+        if self.is_running:
+            return [
+                {
+                    'id': job.id,
+                    'name': job.name,
+                    'trigger': str(job.trigger),
+                    'next_run_time': job.next_run_time
+                }
+                for job in self.scheduler.get_jobs()
+            ]
+        else:
+            return [
+                {
+                    'id': job.get('id', 'N/A'),
+                    'name': job.get('name', 'N/A'),
+                    'trigger': str(job.get('trigger', 'N/A')),
+                    'next_run_time': job.get('next_run_time', 'N/A')
+                }
+                for job in self.jobs
+            ]
 
     def pause_job(self, job_id: str):
         self.scheduler.pause_job(job_id)
