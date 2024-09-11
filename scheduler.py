@@ -10,6 +10,7 @@ from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 import subprocess
 import time
 import os
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
@@ -34,6 +35,7 @@ class EnhancedAPScheduler:
         self.scheduler = self._create_scheduler()
         self.is_running = False
         self.jobs = []  # Store jobs here when scheduler is stopped
+        self.job_status = {}  # Store job status (pass/fail) and last run time
 
     def _create_scheduler(self) -> BackgroundScheduler:
         jobstores = {
@@ -102,10 +104,14 @@ class EnhancedAPScheduler:
             else:
                 raise ValueError(f"Unknown trigger type: {trigger_type}")
         
-        return self.scheduler.add_job(func, trigger, **kwargs)
+        job = self.scheduler.add_job(func, trigger, **kwargs)
+        self.job_status[job.id] = {'status': 'Not run yet', 'last_run': None}
+        return job
 
     def remove_job(self, job_id: str):
         self.scheduler.remove_job(job_id)
+        if job_id in self.job_status:
+            del self.job_status[job_id]
 
     def get_jobs(self) -> List[Dict[str, Any]]:
         if self.is_running:
@@ -114,7 +120,8 @@ class EnhancedAPScheduler:
                     'id': job.id,
                     'name': job.name,
                     'trigger': str(job.trigger),
-                    'next_run_time': job.next_run_time
+                    'next_run_time': job.next_run_time,
+                    'status': self.job_status.get(job.id, {'status': 'Not run yet', 'last_run': None})
                 }
                 for job in self.scheduler.get_jobs()
             ]
@@ -125,7 +132,8 @@ class EnhancedAPScheduler:
                     'name': job['name'],
                     'trigger': str(job['trigger']),
                     'next_run_time': None,
-                    'status': 'Inactive (Scheduler Stopped)'
+                    'status': self.job_status.get(job['id'], {'status': 'Not run yet', 'last_run': None}),
+                    'scheduler_status': 'Inactive (Scheduler Stopped)'
                 }
                 for job in self.jobs
             ]
@@ -151,11 +159,16 @@ class EnhancedAPScheduler:
         except subprocess.CalledProcessError as e:
             logger.error(f"Command failed with error: {e.stderr}")
 
+    def update_job_status(self, job_id: str, status: str):
+        self.job_status[job_id] = {'status': status, 'last_run': datetime.now()}
+
 def job_listener(event):
     if event.exception:
         logger.error(f"Job {event.job_id} raised an exception: {event.exception}")
+        scheduler.update_job_status(event.job_id, 'Failed')
     else:
         logger.info(f"Job {event.job_id} executed successfully")
+        scheduler.update_job_status(event.job_id, 'Passed')
 
 def print_jobs(scheduler: EnhancedAPScheduler):
     jobs = scheduler.get_jobs()
@@ -166,24 +179,38 @@ def print_jobs(scheduler: EnhancedAPScheduler):
         table.add_column("ID", style="cyan")
         table.add_column("Name", style="magenta")
         table.add_column("Trigger", style="blue")
-        table.add_column("Next Run Time", style="yellow")
-        table.add_column("Status", style="bold")
+        table.add_column("Next Run", style="yellow")
+        table.add_column("Countdown", style="green")
+        table.add_column("Last Run Status", style="bold")
+        table.add_column("Scheduler Status", style="bold")
 
+        now = datetime.now(scheduler.scheduler.timezone)
         for job in jobs:
+            next_run = job['next_run_time']
+            countdown = "N/A"
+            if next_run:
+                time_diff = next_run - now
+                countdown = str(timedelta(seconds=int(time_diff.total_seconds())))
+
+            status = job['status']['status']
+            status_style = "green" if status == 'Passed' else "red" if status == 'Failed' else "yellow"
+
             if scheduler.is_running:
-                status_style = "green" if job['next_run_time'] is not None else "grey70"
-                status = "Active" if job['next_run_time'] is not None else "Inactive"
+                scheduler_status = "Active" if next_run is not None else "Inactive"
+                scheduler_status_style = "green" if next_run is not None else "grey70"
             else:
-                status_style = "red"
-                status = job.get('status', 'Scheduler Stopped')
+                scheduler_status = job.get('scheduler_status', 'Scheduler Stopped')
+                scheduler_status_style = "red"
             
             table.add_row(
                 job['id'],
                 job['name'] or "N/A",
                 str(job['trigger']),
-                str(job['next_run_time']) if job['next_run_time'] else "N/A",
+                str(next_run) if next_run else "N/A",
+                countdown,
                 status,
-                style=status_style
+                scheduler_status,
+                style=scheduler_status_style
             )
         
         console.print(table)
@@ -262,6 +289,7 @@ def main():
         'timezone': os.getenv('TIMEZONE', 'UTC')
     }
 
+    global scheduler
     scheduler = EnhancedAPScheduler(config)
     scheduler.scheduler.add_listener(job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
 
