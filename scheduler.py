@@ -33,6 +33,7 @@ class EnhancedAPScheduler:
         self.config = config
         self.scheduler = self._create_scheduler()
         self.is_running = False
+        self.jobs = []  # Store jobs here when scheduler is stopped
 
     def _create_scheduler(self) -> BackgroundScheduler:
         jobstores = {
@@ -58,6 +59,10 @@ class EnhancedAPScheduler:
         if not self.is_running:
             self.scheduler.start()
             self.is_running = True
+            # Restore jobs if any
+            for job in self.jobs:
+                self.scheduler.add_job(**job)
+            self.jobs = []  # Clear the temporary storage
             logger.info("Scheduler started.")
             console.print("Scheduler started.", style="bold green")
         else:
@@ -65,6 +70,18 @@ class EnhancedAPScheduler:
 
     def stop(self):
         if self.is_running:
+            # Store current jobs before shutting down
+            self.jobs = [
+                {
+                    'func': job.func,
+                    'trigger': job.trigger,
+                    'id': job.id,
+                    'name': job.name,
+                    'args': job.args,
+                    'kwargs': job.kwargs
+                }
+                for job in self.scheduler.get_jobs()
+            ]
             self.scheduler.shutdown()
             self.is_running = False
             logger.info("Scheduler stopped.")
@@ -91,15 +108,26 @@ class EnhancedAPScheduler:
         self.scheduler.remove_job(job_id)
 
     def get_jobs(self) -> List[Dict[str, Any]]:
-        return [
-            {
-                'id': job.id,
-                'name': job.name,
-                'trigger': str(job.trigger),
-                'next_run_time': job.next_run_time if self.is_running else None
-            }
-            for job in self.scheduler.get_jobs()
-        ]
+        if self.is_running:
+            return [
+                {
+                    'id': job.id,
+                    'name': job.name,
+                    'trigger': str(job.trigger),
+                    'next_run_time': job.next_run_time
+                }
+                for job in self.scheduler.get_jobs()
+            ]
+        else:
+            return [
+                {
+                    'id': job['id'],
+                    'name': job['name'],
+                    'trigger': str(job['trigger']),
+                    'next_run_time': None
+                }
+                for job in self.jobs
+            ]
 
     def pause_job(self, job_id: str):
         self.scheduler.pause_job(job_id)
