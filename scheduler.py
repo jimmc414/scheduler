@@ -108,27 +108,27 @@ class EnhancedAPScheduler:
     def remove_job(self, job_id: str):
         self.scheduler.remove_job(job_id)
 
-    def get_jobs(self) -> List[Dict[str, Any]]:
-        if self.is_running:
-            return [
-                {
-                    'id': job.id,
-                    'name': job.name,
-                    'trigger': str(job.trigger),
-                    'next_run_time': job.next_run_time
-                }
-                for job in self.scheduler.get_jobs()
-            ]
-        else:
-            return [
-                {
-                    'id': job['id'],
-                    'name': job['name'],
-                    'trigger': str(job['trigger']),
-                    'next_run_time': job['next_run_time'] if job['next_run_time'] else "N/A"
-                }
-                for job in self.jobs
-            ]
+def get_jobs(self) -> List[Dict[str, Any]]:
+    if self.is_running:
+        return [
+            {
+                'id': job.id,
+                'name': job.name,
+                'trigger': str(job.trigger),
+                'next_run_time': job.next_run_time
+            }
+            for job in self.scheduler.get_jobs()
+        ]
+    else:
+        return [
+            {
+                'id': job.get('id', 'N/A'),
+                'name': job.get('name', 'N/A'),
+                'trigger': str(job.get('trigger', 'N/A')),
+                'next_run_time': job.get('next_run_time', 'N/A')
+            }
+            for job in self.jobs
+        ]
 
     def pause_job(self, job_id: str):
         self.scheduler.pause_job(job_id)
@@ -198,17 +198,17 @@ def print_jobs(scheduler: EnhancedAPScheduler):
 
         for job in jobs:
             if scheduler.is_running:
-                status_style = "green" if job['next_run_time'] is not None else "grey70"
-                status = "Active" if job['next_run_time'] is not None else "Inactive"
+                status_style = "green" if job['next_run_time'] != 'N/A' else "grey70"
+                status = "Active" if job['next_run_time'] != 'N/A' else "Inactive"
             else:
                 status_style = "red"
                 status = "Scheduler Stopped"
             
             table.add_row(
-                job['id'],
-                job['name'] or "N/A",
+                str(job['id']),
+                str(job['name']),
                 str(job['trigger']),
-                str(job['next_run_time']) if job['next_run_time'] else "N/A",
+                str(job['next_run_time']),
                 status,
                 style=status_style
             )
@@ -335,7 +335,6 @@ def main():
                 scheduler.stop()
             break
         else:
-            else:
             console.print("Invalid choice. Please enter a number between 1 and 8.", style="bold red")
 
     console.print("Thank you for using the Enhanced APScheduler CLI. Goodbye!", style="bold magenta")
