@@ -11,6 +11,12 @@ import subprocess
 import time
 import os
 from dotenv import load_dotenv
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.live import Live
+from rich.layout import Layout
+from rich import box
 
 # Load environment variables
 load_dotenv()
@@ -22,6 +28,8 @@ logging.basicConfig(
     filename='scheduler.log'
 )
 logger = logging.getLogger(__name__)
+
+console = Console()
 
 class EnhancedAPScheduler:
     def __init__(self, config: Dict[str, Any]):
@@ -112,52 +120,76 @@ def job_listener(event):
     else:
         logger.info(f"Job {event.job_id} executed successfully")
 
+def create_job_table(jobs: List[Dict[str, Any]]) -> Table:
+    table = Table(title="Scheduled Tasks", box=box.ROUNDED)
+    table.add_column("ID", style="cyan")
+    table.add_column("Name", style="magenta")
+    table.add_column("Trigger", style="green")
+    table.add_column("Next Run Time", style="yellow")
+
+    for job in jobs:
+        table.add_row(
+            job['id'],
+            job['name'] or "N/A",
+            str(job['trigger']),
+            str(job['next_run_time']) if job['next_run_time'] else "N/A"
+        )
+
+    return table
+
+def create_menu() -> Panel:
+    menu_items = [
+        "[a]dd task",
+        "[r]emove task",
+        "[p]ause task",
+        "[c]ontinue task",
+        "[q]uit"
+    ]
+    return Panel("\n".join(menu_items), title="Menu", border_style="bold")
+
 def add_task(scheduler: EnhancedAPScheduler):
-    print("Adding a new task to the scheduler")
+    console.print("Adding a new task to the scheduler", style="bold green")
     
-    # Get task details
-    task_type = input("Enter task type (python_task or cli_command): ").strip()
-    task_id = input("Enter a unique task ID: ").strip()
+    task_type = console.input("[bold cyan]Enter task type (python_task or cli_command): [/bold cyan]").strip()
+    task_id = console.input("[bold cyan]Enter a unique task ID: [/bold cyan]").strip()
     
     if task_type == "python_task":
-        arg1 = input("Enter first argument for the task: ").strip()
-        arg2 = input("Enter second argument for the task: ").strip()
+        arg1 = console.input("[bold cyan]Enter first argument for the task: [/bold cyan]").strip()
+        arg2 = console.input("[bold cyan]Enter second argument for the task: [/bold cyan]").strip()
         task_func = EnhancedAPScheduler.python_task_example
         task_args = [arg1, arg2]
     elif task_type == "cli_command":
-        command = input("Enter the CLI command to execute: ").strip()
+        command = console.input("[bold cyan]Enter the CLI command to execute: [/bold cyan]").strip()
         task_func = EnhancedAPScheduler.cli_command_task
         task_args = [command]
     else:
-        print("Invalid task type. Please choose 'python_task' or 'cli_command'.")
+        console.print("Invalid task type. Please choose 'python_task' or 'cli_command'.", style="bold red")
         return
 
-    # Get trigger details
-    trigger_type = input("Enter trigger type (interval, cron, or date): ").strip()
+    trigger_type = console.input("[bold cyan]Enter trigger type (interval, cron, or date): [/bold cyan]").strip()
     
     if trigger_type == "interval":
-        minutes = int(input("Enter interval in minutes: ").strip())
+        minutes = int(console.input("[bold cyan]Enter interval in minutes: [/bold cyan]").strip())
         trigger = {'type': 'interval', 'minutes': minutes}
     elif trigger_type == "cron":
-        day_of_week = input("Enter day of week (mon-fri, mon, tue, etc.): ").strip()
-        hour = int(input("Enter hour (0-23): ").strip())
-        minute = int(input("Enter minute (0-59): ").strip())
+        day_of_week = console.input("[bold cyan]Enter day of week (mon-fri, mon, tue, etc.): [/bold cyan]").strip()
+        hour = int(console.input("[bold cyan]Enter hour (0-23): [/bold cyan]").strip())
+        minute = int(console.input("[bold cyan]Enter minute (0-59): [/bold cyan]").strip())
         trigger = {'type': 'cron', 'day_of_week': day_of_week, 'hour': hour, 'minute': minute}
     elif trigger_type == "date":
-        run_date = input("Enter date and time (YYYY-MM-DD HH:MM:SS): ").strip()
+        run_date = console.input("[bold cyan]Enter date and time (YYYY-MM-DD HH:MM:SS): [/bold cyan]").strip()
         trigger = {'type': 'date', 'run_date': run_date}
     else:
-        print("Invalid trigger type. Please choose 'interval', 'cron', or 'date'.")
+        console.print("Invalid trigger type. Please choose 'interval', 'cron', or 'date'.", style="bold red")
         return
 
-    # Add the job to the scheduler
     try:
         scheduler.add_job(task_func, trigger, args=task_args, id=task_id)
-        print(f"Task '{task_id}' added successfully!")
+        console.print(f"Task '{task_id}' added successfully!", style="bold green")
     except Exception as e:
-        print(f"Error adding task: {str(e)}")
+        console.print(f"Error adding task: {str(e)}", style="bold red")
 
-if __name__ == '__main__':
+def main():
     config = {
         'db_url': os.getenv('DB_URL', 'sqlite:///jobs.sqlite'),
         'max_threads': int(os.getenv('MAX_THREADS', 10)),
@@ -168,29 +200,55 @@ if __name__ == '__main__':
     scheduler = EnhancedAPScheduler(config)
     scheduler.scheduler.add_listener(job_listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
 
-    # Add the option to add tasks
-    while True:
-        choice = input("Enter 'add' to add a new task, 'list' to see all tasks, or 'start' to start the scheduler: ").strip().lower()
-        if choice == 'add':
-            add_task(scheduler)
-        elif choice == 'list':
-            jobs = scheduler.get_jobs()
-            if jobs:
-                print("Current tasks:")
-                for job in jobs:
-                    print(f"ID: {job['id']}, Next run: {job['next_run_time']}, Trigger: {job['trigger']}")
-            else:
-                print("No tasks currently scheduled.")
-        elif choice == 'start':
-            break
-        else:
-            print("Invalid choice. Please enter 'add', 'list', or 'start'.")
+    layout = Layout()
+    layout.split_column(
+        Layout(name="header"),
+        Layout(name="body"),
+        Layout(name="footer")
+    )
 
-    try:
-        scheduler.start()
-        print("Scheduler started. Press Ctrl+C to exit.")
+    layout["body"].split_row(
+        Layout(name="jobs"),
+        Layout(name="menu")
+    )
+
+    with Live(layout, refresh_per_second=1, screen=True):
         while True:
-            time.sleep(1)
-    except (KeyboardInterrupt, SystemExit):
-        scheduler.shutdown()
-        print("Scheduler shut down.")
+            jobs = scheduler.get_jobs()
+            layout["header"].update(Panel("APScheduler Task Manager", style="bold magenta"))
+            layout["jobs"].update(create_job_table(jobs))
+            layout["menu"].update(create_menu())
+            layout["footer"].update(Panel("Press 'q' to quit", border_style="bold"))
+
+            choice = console.input("Enter your choice: ").strip().lower()
+            if choice == 'a':
+                add_task(scheduler)
+            elif choice == 'r':
+                job_id = console.input("Enter the ID of the task to remove: ").strip()
+                try:
+                    scheduler.remove_job(job_id)
+                    console.print(f"Task '{job_id}' removed successfully!", style="bold green")
+                except Exception as e:
+                    console.print(f"Error removing task: {str(e)}", style="bold red")
+            elif choice == 'p':
+                job_id = console.input("Enter the ID of the task to pause: ").strip()
+                try:
+                    scheduler.pause_job(job_id)
+                    console.print(f"Task '{job_id}' paused successfully!", style="bold green")
+                except Exception as e:
+                    console.print(f"Error pausing task: {str(e)}", style="bold red")
+            elif choice == 'c':
+                job_id = console.input("Enter the ID of the task to continue: ").strip()
+                try:
+                    scheduler.resume_job(job_id)
+                    console.print(f"Task '{job_id}' resumed successfully!", style="bold green")
+                except Exception as e:
+                    console.print(f"Error resuming task: {str(e)}", style="bold red")
+            elif choice == 'q':
+                break
+
+    scheduler.shutdown()
+    console.print("Scheduler shut down.", style="bold yellow")
+
+if __name__ == '__main__':
+    main()
