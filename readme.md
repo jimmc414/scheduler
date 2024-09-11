@@ -1,4 +1,4 @@
-# Enhanced APScheduler Implementation
+# APScheduler Implementation
 
 This project provides an implementation of APScheduler, offering a robust and flexible foundation for scheduling and managing jobs in Python applications. It includes an interactive interface for adding and managing tasks.
 
