@@ -1,11 +1,12 @@
-# APScheduler Implementation
+# Enhanced APScheduler Implementation
 
-This project provides an implementation of APScheduler, offering a more robust and flexible foundation for scheduling and managing jobs in Python applications.
+This project provides an implementation of APScheduler, offering a robust and flexible foundation for scheduling and managing jobs in Python applications. It includes an interactive interface for adding and managing tasks.
 
 ## Features
 
 - Encapsulated scheduler functionality in the `EnhancedAPScheduler` class
 - Flexible job addition with support for cron, interval, and date triggers
+- Interactive task addition through a command-line interface
 - Improved error handling and logging
 - Job management capabilities (pause, resume, retrieve job info)
 - Configuration through environment variables
@@ -50,72 +51,76 @@ Adjust these values according to your needs.
 
 ## Usage
 
-1. Import the `EnhancedAPScheduler` class:
-   ```python
-   from enhanced_apscheduler import EnhancedAPScheduler
+1. Run the scheduler script:
+   ```
+   python scheduler.py
    ```
 
-2. Create an instance of the scheduler:
-   ```python
-   config = {
-       'db_url': 'sqlite:///jobs.sqlite',
-       'max_threads': 10,
-       'max_processes': 5,
-       'timezone': 'UTC'
-   }
-   scheduler = EnhancedAPScheduler(config)
-   ```
+2. You will be presented with a menu where you can:
+   - Add new tasks by typing 'add'
+   - List all current tasks by typing 'list'
+   - Start the scheduler by typing 'start'
 
-3. Define your job functions:
-   ```python
-   def my_job(arg1, arg2):
-       print(f"Job executed with args: {arg1}, {arg2}")
-   ```
+3. When adding a task, follow the prompts to specify:
+   - Task type (python_task or cli_command)
+   - Task ID
+   - Task arguments or command
+   - Trigger type (interval, cron, or date)
+   - Trigger details
 
-4. Add jobs to the scheduler:
-   ```python
-   scheduler.add_job(
-       my_job,
-       {'type': 'interval', 'minutes': 5},
-       args=['arg1_value', 'arg2_value'],
-       id='my_job_id'
-   )
-   ```
+4. After adding your desired tasks, start the scheduler.
 
-5. Start the scheduler:
-   ```python
-   scheduler.start()
-   ```
+5. The scheduler will run until you interrupt it with Ctrl+C.
 
-6. To shut down the scheduler gracefully:
-   ```python
-   scheduler.shutdown()
-   ```
+## Task Types
+
+1. Python Task:
+   - Executes a Python function with two string arguments
+   - Example: Logging a message with two parameters
+
+2. CLI Command Task:
+   - Executes a command-line instruction
+   - Example: Running a shell command or script
+
+## Trigger Types
+
+1. Interval:
+   - Runs the job at fixed time intervals
+   - Specify the interval in minutes
+
+2. Cron:
+   - Runs the job on a cron-like schedule
+   - Specify day of week, hour, and minute
+
+3. Date:
+   - Runs the job once at a specific date and time
+   - Specify the date and time in YYYY-MM-DD HH:MM:SS format
 
 ## Example
 
 ```python
-from enhanced_apscheduler import EnhancedAPScheduler
-import time
+from scheduler import EnhancedAPScheduler
 
-def print_hello():
-    print("Hello, World!")
+config = {
+    'db_url': 'sqlite:///jobs.sqlite',
+    'max_threads': 10,
+    'max_processes': 5,
+    'timezone': 'UTC'
+}
 
-scheduler = EnhancedAPScheduler({})
-scheduler.add_job(print_hello, {'type': 'interval', 'seconds': 10}, id='hello_job')
+scheduler = EnhancedAPScheduler(config)
 
-try:
-    scheduler.start()
-    while True:
-        time.sleep(1)
-except (KeyboardInterrupt, SystemExit):
-    scheduler.shutdown()
+# The add_task function will be called automatically when you run scheduler.py
+# Follow the prompts to add tasks interactively
+
+scheduler.start()
 ```
-
-This example creates a job that prints "Hello, World!" every 10 seconds.
 
 ## Advanced Usage
 
+You can also use the `EnhancedAPScheduler` class programmatically:
+
+- Add a job: `scheduler.add_job(func, trigger, **kwargs)`
 - Pause a job: `scheduler.pause_job('job_id')`
 - Resume a job: `scheduler.resume_job('job_id')`
 - Remove a job: `scheduler.remove_job('job_id')`
@@ -124,11 +129,3 @@ This example creates a job that prints "Hello, World!" every 10 seconds.
 ## Logging
 
 Logs are written to `scheduler.log` in the project directory. Adjust the logging configuration in the script if needed.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
