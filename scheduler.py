@@ -124,7 +124,8 @@ class EnhancedAPScheduler:
                     'id': job['id'],
                     'name': job['name'],
                     'trigger': str(job['trigger']),
-                    'next_run_time': None
+                    'next_run_time': None,
+                    'status': 'Inactive (Scheduler Stopped)'
                 }
                 for job in self.jobs
             ]
@@ -174,7 +175,7 @@ def print_jobs(scheduler: EnhancedAPScheduler):
                 status = "Active" if job['next_run_time'] is not None else "Inactive"
             else:
                 status_style = "red"
-                status = "Scheduler Stopped"
+                status = job.get('status', 'Scheduler Stopped')
             
             table.add_row(
                 job['id'],
