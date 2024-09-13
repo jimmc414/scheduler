@@ -1,37 +1,66 @@
+# utils.py
+
 import os
+import time
 from datetime import datetime
 from typing import Union
+import win32api
+import win32con
+import win32file
+import pywintypes
 
-def check_file_exists(file_path: str) -> bool:
-    """
-    Check if a file exists at the given path.
-    
-    :param file_path: Path to the file
-    :return: True if the file exists, False otherwise
-    """
-    try:
-        return os.path.isfile(file_path)
-    except OSError as e:
-        print(f"Error checking if file exists: {e}")
-        return False
 
-def check_file_absent(file_path: str) -> bool:
+def is_file_locked(file_path: str) -> bool:
     """
-    Check if a file does not exist at the given path.
-    
+    Check if a file is locked by trying to open it with exclusive access.
+    Uses pywin32 to interact with Windows APIs.
+
     :param file_path: Path to the file
-    :return: True if the file does not exist, False if it does
+    :return: True if the file is locked, False otherwise
     """
-    try:
-        return not os.path.isfile(file_path)
-    except OSError as e:
-        print(f"Error checking if file is absent: {e}")
+    if not os.path.exists(file_path):
         return False
+    try:
+        handle = win32file.CreateFile(
+            file_path,
+            win32con.GENERIC_READ,
+            0,  # Deny others access
+            None,
+            win32con.OPEN_EXISTING,
+            win32con.FILE_ATTRIBUTE_NORMAL,
+            None
+        )
+        win32file.CloseHandle(handle)
+        return False
+    except pywintypes.error as e:
+        # Error code 32: Sharing violation (file is locked)
+        if e.winerror == 32:
+            return True
+        else:
+            print(f"Error checking if file is locked: {e}")
+            return False
+
+
+def wait_for_file(file_path: str, timeout: int = 60) -> bool:
+    """
+    Wait until the file exists and is not locked, or until timeout is reached.
+
+    :param file_path: Path to the file
+    :param timeout: Maximum time to wait in seconds
+    :return: True if the file is ready, False if timeout reached
+    """
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        if os.path.exists(file_path) and not is_file_locked(file_path):
+            return True
+        time.sleep(1)
+    return False
+
 
 def check_file_timestamp(file_path: str, comparison_time: datetime, operator: str = '>=') -> Union[bool, None]:
     """
     Check if the file's modification time satisfies the comparison.
-    
+
     :param file_path: Path to the file
     :param comparison_time: Time to compare against
     :param operator: Can be '>=', '<=', '==', '>', '<'
@@ -57,84 +86,4 @@ def check_file_timestamp(file_path: str, comparison_time: datetime, operator: st
         print(f"Error checking file timestamp: {e}")
         return None
 
-def check_file_locked(file_path: str) -> Union[bool, None]:
-    """
-    Check if a file is currently locked by another process.
-    A simple implementation that attempts to open the file.
-    
-    :param file_path: Path to the file
-    :return: True if the file is locked, False if it's not, None if there was an error
-    """
-    try:
-        with open(file_path, 'a'):
-            return False  # File is not locked
-    except IOError:
-        return True  # File is locked
-    except OSError as e:
-        print(f"Error checking if file is locked: {e}")
-        return None
-
-def check_current_date(expected_date: datetime) -> bool:
-    """
-    Check if the current date matches the expected date.
-    
-    :param expected_date: The date to compare against
-    :return: True if the current date matches the expected date, False otherwise
-    """
-    try:
-        return datetime.now().date() == expected_date.date()
-    except Exception as e:
-        print(f"Error checking current date: {e}")
-        return False
-
-def check_file_size(file_path: str, expected_size: int, operator: str = '==') -> Union[bool, None]:
-    """
-    Check if the file size satisfies the comparison.
-    
-    :param file_path: Path to the file
-    :param expected_size: Size to compare against (in bytes)
-    :param operator: Can be '==', '>=', '<=', '>', '<'
-    :return: Result of the comparison, or None if there was an error
-    """
-    try:
-        if not os.path.isfile(file_path):
-            return None
-        file_size = os.path.getsize(file_path)
-        if operator == '==':
-            return file_size == expected_size
-        elif operator == '>=':
-            return file_size >= expected_size
-        elif operator == '<=':
-            return file_size <= expected_size
-        elif operator == '>':
-            return file_size > expected_size
-        elif operator == '<':
-            return file_size < expected_size
-        else:
-            raise ValueError(f"Unsupported operator: {operator}")
-    except OSError as e:
-        print(f"Error checking file size: {e}")
-        return None
-
-def check_file_permission(file_path: str, permission: str) -> Union[bool, None]:
-    """
-    Check if the file has the specified permission.
-    
-    :param file_path: Path to the file
-    :param permission: Permission to check ('read', 'write', or 'execute')
-    :return: True if the file has the permission, False if not, None if there was an error
-    """
-    try:
-        if not os.path.exists(file_path):
-            return None
-        if permission == 'read':
-            return os.access(file_path, os.R_OK)
-        elif permission == 'write':
-            return os.access(file_path, os.W_OK)
-        elif permission == 'execute':
-            return os.access(file_path, os.X_OK)
-        else:
-            raise ValueError(f"Unsupported permission: {permission}")
-    except OSError as e:
-        print(f"Error checking file permission: {e}")
-        return None
+# Additional utility functions can be added as needed.
