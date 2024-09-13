@@ -31,6 +31,7 @@ This project implements a workflow scheduler using [APScheduler](https://apsched
 - **Error Handling**: Logging of task execution results, including exit codes and output.
 - **Scheduling**: Use APScheduler to schedule workflows with interval, cron, or date triggers.
 - **CLI Interface**: Interactive menu for managing workflows and scheduler operations.
+- **Default Answers and IDs**: All user prompts provide default answers, and IDs are auto-generated if not provided.
 - **Logging**: Detailed logging to `scheduler.log` for monitoring and debugging.
 
 ## Prerequisites
@@ -43,7 +44,6 @@ This project implements a workflow scheduler using [APScheduler](https://apsched
 ## Installation
 
 1. **Clone the repository**:
-
 
    ```bash
    git clone https://github.com/jimmc414/scheduler.git
@@ -99,43 +99,50 @@ python scheduler.py
 7. **Stop scheduler**: Stop the scheduler if needed.
 8. **Quit**: Exit the CLI.
 
+### Default Answers and IDs
+
+- **Default Answers**: All prompts provide default answers, displayed in square brackets. Press Enter to accept the default.
+- **Auto-generated IDs**:
+  - **Workflow IDs**: If you don't provide a workflow ID, a default unique ID like `workflow_1` is assigned.
+  - **Task IDs**: If you don't provide a task ID, a default unique ID like `task_1` is assigned within the workflow.
+
 ### Creating a Workflow
 
 Select option `2` from the main menu.
 
-- **Prompt**: Enter a unique workflow ID.
-- **Action**: Creates a new workflow with the specified ID.
+- **Prompt**: Enter a unique workflow ID `[default: 'workflow_1']`.
+- **Action**: Creates a new workflow with the specified or default ID.
 
 ### Adding Tasks to a Workflow
 
 Select option `3` from the main menu.
 
-- **Prompt**: Enter the workflow ID to add a task to.
+- **Prompt**: Enter the workflow ID `[default: 'workflow_1']`.
 - **Task Details**:
-  - **Task ID**: Unique identifier for the task.
-  - **Command**: Batch file or Python script to execute.
-  - **Arguments**: Any arguments required by the command.
-  - **Expected Exit Codes**: Exit codes indicating successful execution (e.g., `0`).
-  - **Output Files**: Paths to files that the task is expected to generate.
-  - **Retry Count**: Number of times to retry the task upon failure.
-  - **Retry Delay**: Delay in seconds between retries.
-  - **Continue on Failure**: Whether to continue executing the workflow if the task fails.
+  - **Task ID**: Unique identifier for the task `[default: 'task_1']`.
+  - **Command**: Batch file or Python script to execute `[default: 'echo']`.
+  - **Arguments**: Arguments required by the command `[default: 'Hello World']`.
+  - **Expected Exit Codes**: Exit codes indicating successful execution `[default: '0']`.
+  - **Output Files**: Paths to output files `[default: none]`.
+  - **Retry Count**: Number of times to retry the task upon failure `[default: 0]`.
+  - **Retry Delay**: Delay in seconds between retries `[default: 0]`.
+  - **Continue on Failure**: Whether to continue executing the workflow if the task fails `[default: 'no']`.
 
 ### Scheduling a Workflow
 
 Select option `4` from the main menu.
 
-- **Prompt**: Enter the workflow ID to schedule.
-- **Trigger Type**: Choose from `interval`, `cron`, or `date`.
+- **Prompt**: Enter the workflow ID to schedule `[default: 'workflow_1']`.
+- **Trigger Type**: Choose from `interval`, `cron`, or `date` `[default: 'interval']`.
   - **Interval**:
-    - Enter the interval in minutes.
+    - Enter the interval in minutes `[default: 60]`.
   - **Cron**:
-    - Enter day of the week (e.g., `mon-fri`, `mon`, `tue`).
-    - Enter hour (0-23).
-    - Enter minute (0-59).
+    - Enter day of the week `[default: 'mon-fri']`.
+    - Enter hour `[default: 0]`.
+    - Enter minute `[default: 0]`.
   - **Date**:
-    - Enter date and time in `YYYY-MM-DD HH:MM:SS` format.
-- **Action**: Schedules the workflow with the specified trigger.
+    - Enter date and time in `YYYY-MM-DD HH:MM:SS` format `[default: current time]`.
+- **Action**: Schedules the workflow with the specified or default trigger.
 
 ### Starting and Stopping the Scheduler
 
@@ -151,14 +158,14 @@ Select option `4` from the main menu.
 
 When adding a task to a workflow, provide the following information:
 
-- **Task ID**: A unique identifier for the task.
-- **Command**: The batch file or Python script to execute.
-- **Arguments**: Any arguments required by the command (separated by spaces).
-- **Expected Exit Codes**: Exit codes indicating successful execution (e.g., `0`).
-- **Output Files**: Paths to files that the task is expected to generate (separated by commas).
-- **Retry Count**: Number of times to retry the task upon failure (default is `0`).
-- **Retry Delay**: Delay in seconds between retries (default is `0`).
-- **Continue on Failure**: Whether to continue executing the workflow if the task fails (`yes` or `no`).
+- **Task ID**: A unique identifier for the task `[default: 'task_N']`.
+- **Command**: The batch file or Python script to execute `[default: 'echo']`.
+- **Arguments**: Any arguments required by the command `[default: 'Hello World']`.
+- **Expected Exit Codes**: Exit codes indicating successful execution `[default: '0']`.
+- **Output Files**: Paths to files that the task is expected to generate `[default: none]`.
+- **Retry Count**: Number of times to retry the task upon failure `[default: 0]`.
+- **Retry Delay**: Delay in seconds between retries `[default: 0]`.
+- **Continue on Failure**: Whether to continue executing the workflow if the task fails `[default: 'no']`.
 
 ## Workflow Execution
 
@@ -189,40 +196,41 @@ When adding a task to a workflow, provide the following information:
 
 #### 1. Create a Workflow
 
-- **Workflow ID**: `daily_backup`
-- **Action**: Create a new workflow with this ID.
+- **Action**: Create a new workflow. When prompted, accept the default ID `workflow_1`.
 
 #### 2. Add Tasks to the Workflow
 
 ##### Task 1: Backup Database
 
-- **Task ID**: `backup_db`
-- **Command**: `backup_database.bat`
-- **Arguments**: *(leave empty if none)*
-- **Expected Exit Codes**: `0`
-- **Output Files**: `C:\backups\db_backup.sql`
-- **Retry Count**: `2`
-- **Retry Delay**: `30`
-- **Continue on Failure**: `no`
+- **Action**: Add a task to `workflow_1`. When prompted:
+  - **Task ID**: Accept default `task_1`.
+  - **Command**: Enter `backup_database.bat`.
+  - **Arguments**: *(leave empty if none)*.
+  - **Expected Exit Codes**: Accept default `0`.
+  - **Output Files**: Enter `C:\backups\db_backup.sql`.
+  - **Retry Count**: Enter `2`.
+  - **Retry Delay**: Enter `30`.
+  - **Continue on Failure**: Accept default `no`.
 
 ##### Task 2: Compress Backup
 
-- **Task ID**: `compress_backup`
-- **Command**: `python`
-- **Arguments**: `compress_backup.py C:\backups\db_backup.sql`
-- **Expected Exit Codes**: `0`
-- **Output Files**: `C:\backups\db_backup.zip`
-- **Retry Count**: `1`
-- **Retry Delay**: `15`
-- **Continue on Failure**: `no`
+- **Action**: Add another task to `workflow_1`. When prompted:
+  - **Task ID**: Accept default `task_2`.
+  - **Command**: Enter `python`.
+  - **Arguments**: Enter `compress_backup.py C:\backups\db_backup.sql`.
+  - **Expected Exit Codes**: Accept default `0`.
+  - **Output Files**: Enter `C:\backups\db_backup.zip`.
+  - **Retry Count**: Enter `1`.
+  - **Retry Delay**: Enter `15`.
+  - **Continue on Failure**: Accept default `no`.
 
 #### 3. Schedule the Workflow
 
-- **Trigger Type**: `cron`
-- **Day of Week**: `mon-fri`
-- **Hour**: `1`
-- **Minute**: `0`
-- **Action**: The workflow `daily_backup` is scheduled to run at 1:00 AM from Monday to Friday.
+- **Action**: Schedule `workflow_1`. When prompted:
+  - **Trigger Type**: Enter `cron`.
+  - **Day of Week**: Accept default `mon-fri`.
+  - **Hour**: Enter `1`.
+  - **Minute**: Enter `0`.
 
 #### 4. Start the Scheduler
 
@@ -235,6 +243,7 @@ When adding a task to a workflow, provide the following information:
 
 ## Additional Notes
 
+- **Default Values**: The application provides sensible defaults for all user inputs to streamline the setup process.
 - **Windows Compatibility**: Designed for Windows environments, utilizing `pywin32` for file operations.
 - **Extensibility**: The codebase is designed to be extensible for future enhancements, such as parallel task execution.
 - **Error Handling**:
@@ -249,7 +258,7 @@ When adding a task to a workflow, provide the following information:
 For any issues, questions, or suggestions, please contact:
 
 - **Email**: [youremail@example.com](mailto:youremail@example.com)
-- **GitHub**: https://github.com/jimmc414/scheduler.git
+- **GitHub**: [https://github.com/yourusername/workflow-scheduler](https://github.com/yourusername/workflow-scheduler)
 
 ## License
 
@@ -258,3 +267,32 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Disclaimer**: This project is provided "as-is" without any warranties. Use at your own risk.
+```
+
+---
+
+### **Explanation**
+
+The updated `scheduler.py` now includes default answers for all user prompts. When an ID is requested, it suggests an available ID by generating one that isn't already in use.
+
+- **Default Workflow ID Generation**: The `generate_default_workflow_id()` function creates a unique workflow ID by incrementing a number until an unused ID is found.
+
+- **Default Task ID Generation**: The `generate_default_task_id(workflow)` function creates a unique task ID within the context of a workflow.
+
+- **User Prompts with Defaults**: All `console.input()` calls now include `[default: ...]` in the prompt, and the code uses the default if the user presses Enter without typing anything.
+
+- **Handling Numeric Inputs**: For inputs like retry count and delay, the code checks if the input is a digit and falls back to the default if it's not provided or invalid.
+
+- **Scheduler Start/Stop Messages**: The code now informs the user if they try to start the scheduler when it's already running or stop it when it's not running.
+
+- **Readme Updates**: The `README.md` has been updated to reflect these changes, informing users about the default answers and auto-generated IDs.
+
+---
+
+### **Next Steps**
+
+- **Testing**: Run the updated application to ensure that default values are correctly applied when the user presses Enter without providing input.
+
+- **Review**: Verify that the auto-generated IDs do not conflict with existing IDs, especially when workflows or tasks are deleted and new ones are created.
+
+- **Enhancements**: Consider adding features like editing existing workflows or tasks, deleting workflows, and better error messages for invalid inputs.
